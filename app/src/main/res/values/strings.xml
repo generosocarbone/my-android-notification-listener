@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SystemsLabNotificationListener</string>
+    <string name="service_name">Notification Listener</string>
+</resources>
