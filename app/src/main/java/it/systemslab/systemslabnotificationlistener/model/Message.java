@@ -6,7 +6,15 @@ import com.google.gson.Gson;
 
 public class Message {
     private String alias;
-    private Notification notification;
+    private MqttNotification notification;
+
+    public Message() {
+    }
+
+    public Message(String alias, MqttNotification mqttNotification) {
+        this.alias = alias;
+        this.notification = mqttNotification;
+    }
 
     public String getAlias() {
         return alias;
@@ -16,11 +24,11 @@ public class Message {
         this.alias = alias;
     }
 
-    public Notification getNotification() {
+    public MqttNotification getNotification() {
         return notification;
     }
 
-    public void setNotification(Notification notification) {
+    public void setNotification(MqttNotification notification) {
         this.notification = notification;
     }
 

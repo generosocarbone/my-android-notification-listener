@@ -4,10 +4,19 @@ import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 
-public class Notification {
+public class MqttNotification {
     private String title;
     private String text;
     private String packageName;
+
+    public MqttNotification() {
+    }
+
+    public MqttNotification(String title, String text, String packageName) {
+        this.title = title;
+        this.text = text;
+        this.packageName = packageName;
+    }
 
     public String getTitle() {
         return title;

@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener;
+package it.systemslab.systemslabnotificationlistener.listener;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -14,26 +14,53 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.text.SpannableString;
 import android.util.Log;
 
-import java.util.Set;
+import org.jetbrains.annotations.NotNull;
 
-public class NotificationListenerA extends NotificationListenerService {
+import java.io.IOException;
 
-    private final static String TAG = NotificationListenerA.class.getSimpleName();
+import it.systemslab.cryptomodule.DHKEInstance;
+import it.systemslab.systemslabnotificationlistener.NotificationRestClient;
+import it.systemslab.systemslabnotificationlistener.SharedPrefManager;
+import it.systemslab.systemslabnotificationlistener.model.Message;
+import it.systemslab.systemslabnotificationlistener.model.MqttNotification;
+import it.systemslab.systemslabnotificationlistener.utils.CryptoUtils;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
+public class NotificationListenerXX extends NotificationListenerService implements Callback {
+
+    private final static String TAG = NotificationListenerXX.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
+    private final NotificationRestClient client = new NotificationRestClient();
+    private boolean bound = false;
+
+    @Override
+    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+        Log.d(TAG, "onFailure: call: ");
+    }
+
+    @Override
+    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+        Log.d(TAG, "onResponse: on response");
+    }
 
     public class LocalBinder extends Binder {
-        public NotificationListenerA getService() {
-            return NotificationListenerA.this;
+        public NotificationListenerXX getService() {
+            return NotificationListenerXX.this;
         }
     }
+
 
     @Override
     public IBinder onBind(Intent intent) {
         String action = intent.getAction();
         Log.d(TAG, "onBind: action: " + action);
         if(SERVICE_INTERFACE.equals(action)){
+            bound = true;
             return super.onBind(intent);
         } else {
             return binder;
@@ -78,14 +105,75 @@ public class NotificationListenerA extends NotificationListenerService {
             // android.text
             if(extras != null) {
                 String packageName = sbn.getPackageName();
-                String title = extras.getString("android.title");
-                String text = extras.getString("android.text");
-                Log.d(TAG, String.format(
-                        "new notification from %s:\n%s\n%s",
-                        packageName,
-                        title,
-                        text
-                ));
+                if (packageName.equals("com.android.systemui")) {
+                    Log.d(TAG, "onNotificationPosted: avoiding " + packageName);
+                } else {
+
+                    packageName = DHKEInstance.getInstance().encryptMessage(
+                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
+                            sbn.getPackageName()
+                    );
+
+                    if (packageName == null)
+                        packageName = "";
+
+                    String title;
+                    try {
+                        if(extras.get("android.title") instanceof String) {
+                            title = extras.getString("android.title");
+                        } else if (extras.get("android.title") instanceof SpannableString) {
+                            Log.d(TAG, "onNotificationPosted: get spannable string");
+                            SpannableString ss = (SpannableString) extras.get("android.title");
+                            title = ss.toString();
+                        } else {
+                            title = "";
+                        }
+                    } catch (Exception e) {
+                        title = "";
+                    }
+                    title = DHKEInstance.getInstance().encryptMessage(
+                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
+                            title
+                    );
+
+                    String text;
+                    try {
+                        if(extras.get("android.text") instanceof String) {
+                            Log.d(TAG, "onNotificationPosted: get string");
+                            text = extras.getString("android.text");
+                        } else if (extras.get("android.text") instanceof SpannableString) {
+                            Log.d(TAG, "onNotificationPosted: get spannable string");
+                            SpannableString ss = (SpannableString) extras.get("android.text");
+                            text = ss.toString();
+                        } else {
+                            text = "";
+                        }
+                    } catch (Exception e) {
+                        Log.d(TAG, "onNotificationPosted: exception: " + e.toString());
+
+                        text = "";
+                    }
+
+                    text = DHKEInstance.getInstance().encryptMessage(
+                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
+                            text
+                    );
+
+                    Log.d(TAG, String.format(
+                            "new notification from %s:\n%s\n%s",
+                            packageName,
+                            title,
+                            text
+                    ));
+
+                    Message m = new Message(
+                            "ILSCNOUZ",
+                            new MqttNotification(title, text, packageName)
+                    );
+
+                    Log.d(TAG, "onNotificationPosted: " + m.toString());
+                    client.sendNotificationToWatch(m, this);
+                }
             } else {
                 Log.d(TAG, "onNotificationPosted: no extras");
             }
@@ -113,7 +201,7 @@ public class NotificationListenerA extends NotificationListenerService {
 
     public boolean checkNotificationListenerPermission() {
         Log.d(TAG, "checking notification permissions");
-        ComponentName cn = new ComponentName(this, NotificationListenerA.class);
+        ComponentName cn = new ComponentName(this, NotificationListenerXX.class);
         String flat = Settings.Secure.getString(this.getContentResolver(), "enabled_notification_listeners");
         return flat != null && flat.contains(cn.flattenToString());
     }
@@ -121,11 +209,15 @@ public class NotificationListenerA extends NotificationListenerService {
     public void requestRebind() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Log.d(TAG, "requesting rebind");
-            requestRebind(new ComponentName(this, NotificationListenerA.class));
+            requestRebind(new ComponentName(this, NotificationListenerXX.class));
         }
     }
 
-    public NotificationListenerA() {
+    public boolean isBound() {
+        return bound;
+    }
+
+    public NotificationListenerXX() {
         super();
     }
 

@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener;
+package it.systemslab.systemslabnotificationlistener.listener;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,7 +12,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "onReceive: " + intent.getAction());
-        Intent serviceIntent = new Intent(context, NotificationListenerA.class);
+        Intent serviceIntent = new Intent(context, NotificationListenerXX.class);
         context.startService(serviceIntent);
     }
 }
