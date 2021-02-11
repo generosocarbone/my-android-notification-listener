@@ -14,7 +14,7 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField 'String', 'LIFESENSOR_BE', '"https://antiabbandono.herokuapp.com"'
+        buildConfigField 'String', 'LIFESENSOR_BE', '"http://stream.lifesensor.cloud:8081"'
     }
 
     buildTypes {

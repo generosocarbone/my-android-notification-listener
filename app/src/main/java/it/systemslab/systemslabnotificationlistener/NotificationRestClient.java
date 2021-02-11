@@ -15,7 +15,7 @@ public class NotificationRestClient {
 
     private final static String TAG = NotificationRestClient.class.getSimpleName();
     private final static String BASE_URL = BuildConfig.LIFESENSOR_BE;
-    private final static String POST_CONFIG = BASE_URL + "/api/v0/postNotification";
+    private final static String POST_NOTIFICATION = BASE_URL + "/api/v1/notification";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private final OkHttpClient client = new OkHttpClient.Builder()
@@ -32,10 +32,10 @@ public class NotificationRestClient {
                 JSON);
 
         Request request = new Request.Builder()
-                .url(POST_CONFIG)
+                .url(POST_NOTIFICATION)
                 .post(body)
                 .build();
-        Log.d(TAG, "sendNotificationToWatch: url: " + POST_CONFIG);
+        Log.d(TAG, "sendNotificationToWatch: url: " + POST_NOTIFICATION);
         client.newCall(request).enqueue(callback);
     }
 }

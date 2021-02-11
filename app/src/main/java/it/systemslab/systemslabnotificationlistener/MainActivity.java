@@ -3,7 +3,6 @@ package it.systemslab.systemslabnotificationlistener;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
@@ -22,33 +21,34 @@ import org.androidannotations.annotations.AfterViews;
 import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EActivity;
 import org.androidannotations.annotations.ViewById;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
+import java.util.Objects;
 
 import it.systemslab.cryptomodule.DHKEInstance;
-import it.systemslab.systemslabnotificationlistener.listener.NotificationListenerXX;
+import it.systemslab.systemslabnotificationlistener.listener.NotificationListenerX;
 import it.systemslab.systemslabnotificationlistener.model.Message;
 import it.systemslab.systemslabnotificationlistener.model.MqttNotification;
 import it.systemslab.systemslabnotificationlistener.model.QRData;
-import it.systemslab.systemslabnotificationlistener.mqtt.MqttHelper;
-import it.systemslab.systemslabnotificationlistener.mqtt.MqttHelperCallback;
 import it.systemslab.systemslabnotificationlistener.utils.CryptoUtils;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
 
 @EActivity(R.layout.activity_main)
-public class MainActivity extends AppCompatActivity implements ServiceConnection, MqttHelperCallback {
+public class MainActivity extends AppCompatActivity implements ServiceConnection, Callback {
 
     private final static String TAG = MainActivity.class.getSimpleName();
-    private NotificationListenerXX service;
+    private NotificationListenerX service;
 
     @ViewById
     TextView alias;
 
     @AfterViews
     void av(){
-
         SharedPrefManager instance = SharedPrefManager.getInstance(this);
         alias.setText(String.format("Alias: %s", instance.getAlias()));
-        MqttHelper mqttHelper = MqttHelper.getInstance(this, true);
-        mqttHelper.setHelperCallback(this);
-        mqttHelper.connect();
     }
 
     @Click(R.id.associazione)
@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     prefManager.setKey(CryptoUtils.encryptData(qrdata.getKey(), this));
                     alias.setText(String.format("Alias: %s", contentAlias));
 
-                    tmpNotification();
+                    confirmNotification();
                 }
             } else {
                 super.onActivityResult(requestCode, resultCode, data);
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private void startService() {
         if(service == null) {
-            Intent serviceIntent = new Intent(this, NotificationListenerXX.class);
+            Intent serviceIntent = new Intent(this, NotificationListenerX.class);
 //            startService(serviceIntent);
             bindService(serviceIntent, this, BIND_AUTO_CREATE);
         }
@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         Log.d(TAG, "onServiceConnected: binded");
-        this.service = ((NotificationListenerXX.LocalBinder) iBinder).getService();
+        this.service = ((NotificationListenerX.LocalBinder) iBinder).getService();
         if(service != null) {
             service.publicMethod();
             if(service.checkNotificationListenerPermission()) {
@@ -153,40 +153,33 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         service = null;
     }
 
-
-    @Override
-    public void onConnectionLost() {
-        Log.d(TAG, "onConnectionLost: ");
-    }
-
-    @Override
-    public void onConnectionSuccess() {
-        Log.d(TAG, "onConnectionSuccess: ");
-        tmpNotification();
-    }
-
-    private void tmpNotification() {
+    private void confirmNotification() {
         SharedPrefManager instance = SharedPrefManager.getInstance(this);
         if (instance.getAlias() != null) {
             DHKEInstance dhkeInstance = DHKEInstance.getInstance();
-            Log.d(TAG, "tmpNotification: getKey: " + instance.getKey());
-            Log.d(TAG, "tmpNotification: decryptData: " +CryptoUtils.decryptData(instance.getKey(), this));
-            MqttHelper.getInstance(this, true)
-                    .publishTrace(
-                            new Message(
-                                    instance.getAlias(),
-                                    new MqttNotification(
-                                            dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"title"),
-                                            dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"text"),
-                                            dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), getPackageName())
-                                    )
-                            ).toString()
-                    );
+            NotificationRestClient client = new NotificationRestClient();
+            client.sendNotificationToWatch(
+                new Message(
+                        instance.getAlias(),
+                        new MqttNotification(
+                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"action"),
+                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"eu.beamdigital.beamwatch.confirm"),
+                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), "eu.beamdigital.beamwatch")
+                        )
+                ),
+            this
+            );
         }
     }
 
     @Override
-    public void onConnectionFailure() {
-        Log.d(TAG, "onConnectionFailure: ");
+    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+        Log.d(TAG, "onFailure: " + e.toString());
+        e.printStackTrace();
+    }
+
+    @Override
+    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+        Log.d(TAG, "onResponse: " + Objects.requireNonNull(response.body()).string());
     }
 }

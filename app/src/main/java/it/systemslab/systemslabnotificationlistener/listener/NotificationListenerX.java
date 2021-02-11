@@ -31,16 +31,17 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class NotificationListenerXX extends NotificationListenerService implements Callback {
+public class NotificationListenerX extends NotificationListenerService implements Callback {
 
-    private final static String TAG = NotificationListenerXX.class.getSimpleName();
+    private final static String TAG = NotificationListenerX.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
     private final NotificationRestClient client = new NotificationRestClient();
     private boolean bound = false;
 
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
-        Log.d(TAG, "onFailure: call: ");
+        Log.d(TAG, "onFailure: call: " + e.toString());
+        e.printStackTrace();
     }
 
     @Override
@@ -49,8 +50,8 @@ public class NotificationListenerXX extends NotificationListenerService implemen
     }
 
     public class LocalBinder extends Binder {
-        public NotificationListenerXX getService() {
-            return NotificationListenerXX.this;
+        public NotificationListenerX getService() {
+            return NotificationListenerX.this;
         }
     }
 
@@ -108,66 +109,34 @@ public class NotificationListenerXX extends NotificationListenerService implemen
                 if (packageName.equals("com.android.systemui")) {
                     Log.d(TAG, "onNotificationPosted: avoiding " + packageName);
                 } else {
-
                     packageName = DHKEInstance.getInstance().encryptMessage(
                             CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
                             sbn.getPackageName()
                     );
 
+                    for (String k : extras.keySet())
+                        Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
+
                     if (packageName == null)
                         packageName = "";
 
-                    String title;
-                    try {
-                        if(extras.get("android.title") instanceof String) {
-                            title = extras.getString("android.title");
-                        } else if (extras.get("android.title") instanceof SpannableString) {
-                            Log.d(TAG, "onNotificationPosted: get spannable string");
-                            SpannableString ss = (SpannableString) extras.get("android.title");
-                            title = ss.toString();
-                        } else {
-                            title = "";
-                        }
-                    } catch (Exception e) {
-                        title = "";
-                    }
+                    String title = getStringFromExtras(extras, "android.title");
                     title = DHKEInstance.getInstance().encryptMessage(
                             CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
                             title
                     );
 
-                    String text;
-                    try {
-                        if(extras.get("android.text") instanceof String) {
-                            Log.d(TAG, "onNotificationPosted: get string");
-                            text = extras.getString("android.text");
-                        } else if (extras.get("android.text") instanceof SpannableString) {
-                            Log.d(TAG, "onNotificationPosted: get spannable string");
-                            SpannableString ss = (SpannableString) extras.get("android.text");
-                            text = ss.toString();
-                        } else {
-                            text = "";
-                        }
-                    } catch (Exception e) {
-                        Log.d(TAG, "onNotificationPosted: exception: " + e.toString());
-
-                        text = "";
-                    }
-
+                    String text = getStringFromExtras(extras, "android.text");
                     text = DHKEInstance.getInstance().encryptMessage(
                             CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
                             text
                     );
 
-                    Log.d(TAG, String.format(
-                            "new notification from %s:\n%s\n%s",
-                            packageName,
-                            title,
-                            text
-                    ));
+                    Log.d(TAG, String.format("new notification from %s:\n%s\n%s", packageName, title, text));
 
+                    SharedPrefManager instance = SharedPrefManager.getInstance(this);
                     Message m = new Message(
-                            "ILSCNOUZ",
+                            instance.getAlias(),
                             new MqttNotification(title, text, packageName)
                     );
 
@@ -180,6 +149,25 @@ public class NotificationListenerXX extends NotificationListenerService implemen
         } else {
             Log.d(TAG, "onNotificationPosted: no notification");
         }
+    }
+
+    private String getStringFromExtras(Bundle extras, String key) {
+        String extraString = "";
+        try {
+            if(extras.get(key) instanceof String) {
+                extraString = extras.getString(key);
+            } else if (extras.get(key) instanceof SpannableString) {
+                SpannableString ss = (SpannableString) extras.get(key);
+                extraString = ss.toString();
+            } else {
+                extraString = "";
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getStringFromExtras: error: " + e.toString());
+            e.printStackTrace();
+        }
+
+        return  extraString;
     }
 
     @Override
@@ -201,7 +189,7 @@ public class NotificationListenerXX extends NotificationListenerService implemen
 
     public boolean checkNotificationListenerPermission() {
         Log.d(TAG, "checking notification permissions");
-        ComponentName cn = new ComponentName(this, NotificationListenerXX.class);
+        ComponentName cn = new ComponentName(this, NotificationListenerX.class);
         String flat = Settings.Secure.getString(this.getContentResolver(), "enabled_notification_listeners");
         return flat != null && flat.contains(cn.flattenToString());
     }
@@ -209,7 +197,7 @@ public class NotificationListenerXX extends NotificationListenerService implemen
     public void requestRebind() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Log.d(TAG, "requesting rebind");
-            requestRebind(new ComponentName(this, NotificationListenerXX.class));
+            requestRebind(new ComponentName(this, NotificationListenerX.class));
         }
     }
 
@@ -217,8 +205,30 @@ public class NotificationListenerXX extends NotificationListenerService implemen
         return bound;
     }
 
-    public NotificationListenerXX() {
+    public NotificationListenerX() {
         super();
+    }
+
+    private void tmpNotification(String title, String text, String packageName) {
+        SharedPrefManager instance = SharedPrefManager.getInstance(this);
+        if (instance.getAlias() != null) {
+            DHKEInstance dhkeInstance = DHKEInstance.getInstance();
+            NotificationRestClient client = new NotificationRestClient();
+            client.sendNotificationToWatch(
+                    new Message(
+                            instance.getAlias(),
+                            new MqttNotification(
+                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), title),
+                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), text),
+                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), packageName)
+                            )
+                    ),
+                    this
+            );
+
+            Log.d(TAG, "tmpNotification: getKey: " + instance.getKey());
+            Log.d(TAG, "tmpNotification: decryptData: " +CryptoUtils.decryptData(instance.getKey(), this));
+        }
     }
 
     @Override
