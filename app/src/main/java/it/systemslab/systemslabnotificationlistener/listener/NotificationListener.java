@@ -20,6 +20,7 @@ import android.util.Log;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 import it.systemslab.cryptomodule.DHKEInstance;
 import it.systemslab.systemslabnotificationlistener.NotificationRestClient;
@@ -31,12 +32,18 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class NotificationListenerX extends NotificationListenerService implements Callback {
+import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Posted;
+import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Removed;
+import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Update;
 
-    private final static String TAG = NotificationListenerX.class.getSimpleName();
+public class NotificationListener extends NotificationListenerService implements Callback {
+
+    private final static String TAG = NotificationListener.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
     private final NotificationRestClient client = new NotificationRestClient();
     private boolean bound = false;
+    private final HashSet<Integer> set = new HashSet<>();
+
 
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -47,11 +54,13 @@ public class NotificationListenerX extends NotificationListenerService implement
     @Override
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
         Log.d(TAG, "onResponse: on response");
+        Log.d(TAG, "onResponse: body: " + response.body().string());
+
     }
 
     public class LocalBinder extends Binder {
-        public NotificationListenerX getService() {
-            return NotificationListenerX.this;
+        public NotificationListener getService() {
+            return NotificationListener.this;
         }
     }
 
@@ -94,50 +103,62 @@ public class NotificationListenerX extends NotificationListenerService implement
         Log.d(TAG, "onListenerDisconnected: ");
     }
 
+    private String encrypt(String clearText) {
+        String encrypted = DHKEInstance.getInstance().encryptMessage(
+            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
+            clearText
+        );
+
+        if (encrypted == null)
+            encrypted = "";
+
+        return encrypted;
+    }
+
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         super.onNotificationPosted(sbn);
         Notification notification = sbn.getNotification();
+        Log.d(TAG, "onNotificationPosted: id: " + sbn.getId());
         if (notification != null) {
             Bundle extras = notification.extras;
             // interesting extras
             // sbn.getPackageName()
             // android.title
             // android.text
-            if(extras != null) {
+            if (extras != null) {
+                MqttNotification.Action action;
+
+                if (set.add(sbn.getId())) {
+                    action = Posted;
+                } else {
+                    action = Update;
+                }
+
+                Log.d(TAG, "onNotificationPosted: active: " + set.size());
                 String packageName = sbn.getPackageName();
                 if (packageName.equals("com.android.systemui")) {
                     Log.d(TAG, "onNotificationPosted: avoiding " + packageName);
                 } else {
-                    packageName = DHKEInstance.getInstance().encryptMessage(
-                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
-                            sbn.getPackageName()
-                    );
 
-                    for (String k : extras.keySet())
-                        Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
+                    ///
+                    /// for (String k : extras.keySet())
+                    ///    Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
 
-                    if (packageName == null)
-                        packageName = "";
-
-                    String title = getStringFromExtras(extras, "android.title");
-                    title = DHKEInstance.getInstance().encryptMessage(
-                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
-                            title
-                    );
-
-                    String text = getStringFromExtras(extras, "android.text");
-                    text = DHKEInstance.getInstance().encryptMessage(
-                            CryptoUtils.decryptData(SharedPrefManager.getInstance(this).getKey(), this),
-                            text
-                    );
-
-                    Log.d(TAG, String.format("new notification from %s:\n%s\n%s", packageName, title, text));
+                    packageName = encrypt(sbn.getPackageName());
+                    String title = encrypt(getStringFromExtras(extras, "android.title"));
+                    String text = encrypt(getStringFromExtras(extras, "android.text"));
 
                     SharedPrefManager instance = SharedPrefManager.getInstance(this);
                     Message m = new Message(
-                            instance.getAlias(),
-                            new MqttNotification(title, text, packageName)
+                        instance.getAlias(),
+                        new MqttNotification(
+                            title,
+                            text,
+                            packageName,
+                            sbn.getId(),
+                            action
+                        )
                     );
 
                     Log.d(TAG, "onNotificationPosted: " + m.toString());
@@ -173,7 +194,16 @@ public class NotificationListenerX extends NotificationListenerService implement
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         super.onNotificationRemoved(sbn);
-        Log.d(TAG, "onNotificationRemoved: ");
+        Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId());
+        set.remove(sbn.getId());
+        Log.d(TAG, "onNotificationRemoved: active: " + set.size());
+        client.sendNotificationToWatch(
+                new Message(
+                        SharedPrefManager.getInstance(this).getAlias(),
+                        new MqttNotification(sbn.getId(), Removed)
+                ),
+                this
+        );
     }
 
     @Override
@@ -189,7 +219,7 @@ public class NotificationListenerX extends NotificationListenerService implement
 
     public boolean checkNotificationListenerPermission() {
         Log.d(TAG, "checking notification permissions");
-        ComponentName cn = new ComponentName(this, NotificationListenerX.class);
+        ComponentName cn = new ComponentName(this, NotificationListener.class);
         String flat = Settings.Secure.getString(this.getContentResolver(), "enabled_notification_listeners");
         return flat != null && flat.contains(cn.flattenToString());
     }
@@ -197,7 +227,7 @@ public class NotificationListenerX extends NotificationListenerService implement
     public void requestRebind() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Log.d(TAG, "requesting rebind");
-            requestRebind(new ComponentName(this, NotificationListenerX.class));
+            requestRebind(new ComponentName(this, NotificationListener.class));
         }
     }
 
@@ -205,30 +235,8 @@ public class NotificationListenerX extends NotificationListenerService implement
         return bound;
     }
 
-    public NotificationListenerX() {
+    public NotificationListener() {
         super();
-    }
-
-    private void tmpNotification(String title, String text, String packageName) {
-        SharedPrefManager instance = SharedPrefManager.getInstance(this);
-        if (instance.getAlias() != null) {
-            DHKEInstance dhkeInstance = DHKEInstance.getInstance();
-            NotificationRestClient client = new NotificationRestClient();
-            client.sendNotificationToWatch(
-                    new Message(
-                            instance.getAlias(),
-                            new MqttNotification(
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), title),
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), text),
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), packageName)
-                            )
-                    ),
-                    this
-            );
-
-            Log.d(TAG, "tmpNotification: getKey: " + instance.getKey());
-            Log.d(TAG, "tmpNotification: decryptData: " +CryptoUtils.decryptData(instance.getKey(), this));
-        }
     }
 
     @Override

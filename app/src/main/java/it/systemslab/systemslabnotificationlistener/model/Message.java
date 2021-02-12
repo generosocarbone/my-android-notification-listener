@@ -5,15 +5,16 @@ import androidx.annotation.NonNull;
 import com.google.gson.Gson;
 
 public class Message {
+
     private String alias;
     private MqttNotification notification;
 
     public Message() {
     }
 
-    public Message(String alias, MqttNotification mqttNotification) {
+    public Message(String alias, MqttNotification notification) {
         this.alias = alias;
-        this.notification = mqttNotification;
+        this.notification = notification;
     }
 
     public String getAlias() {

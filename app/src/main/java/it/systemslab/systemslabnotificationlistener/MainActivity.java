@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 import it.systemslab.cryptomodule.DHKEInstance;
-import it.systemslab.systemslabnotificationlistener.listener.NotificationListenerX;
+import it.systemslab.systemslabnotificationlistener.listener.NotificationListener;
 import it.systemslab.systemslabnotificationlistener.model.Message;
 import it.systemslab.systemslabnotificationlistener.model.MqttNotification;
 import it.systemslab.systemslabnotificationlistener.model.QRData;
@@ -36,11 +36,13 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
+import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Confirm;
+
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements ServiceConnection, Callback {
 
     private final static String TAG = MainActivity.class.getSimpleName();
-    private NotificationListenerX service;
+    private NotificationListener service;
 
     @ViewById
     TextView alias;
@@ -109,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private void startService() {
         if(service == null) {
-            Intent serviceIntent = new Intent(this, NotificationListenerX.class);
+            Intent serviceIntent = new Intent(this, NotificationListener.class);
 //            startService(serviceIntent);
             bindService(serviceIntent, this, BIND_AUTO_CREATE);
         }
@@ -124,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         Log.d(TAG, "onServiceConnected: binded");
-        this.service = ((NotificationListenerX.LocalBinder) iBinder).getService();
+        this.service = ((NotificationListener.LocalBinder) iBinder).getService();
         if(service != null) {
             service.publicMethod();
             if(service.checkNotificationListenerPermission()) {
@@ -160,12 +162,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             NotificationRestClient client = new NotificationRestClient();
             client.sendNotificationToWatch(
                 new Message(
-                        instance.getAlias(),
-                        new MqttNotification(
-                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"action"),
-                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"eu.beamdigital.beamwatch.confirm"),
-                                dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), "eu.beamdigital.beamwatch")
-                        )
+                    instance.getAlias(),
+                    new MqttNotification(
+                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"action"),
+                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"eu.beamdigital.beamwatch.confirm"),
+                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), "eu.beamdigital.beamwatch"),
+                        0,
+                        Confirm
+                    )
                 ),
             this
             );

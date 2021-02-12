@@ -1,7 +1,5 @@
 package it.systemslab.systemslabnotificationlistener;
 
-import android.util.Log;
-
 import java.util.concurrent.TimeUnit;
 
 import it.systemslab.systemslabnotificationlistener.model.Message;
@@ -35,7 +33,6 @@ public class NotificationRestClient {
                 .url(POST_NOTIFICATION)
                 .post(body)
                 .build();
-        Log.d(TAG, "sendNotificationToWatch: url: " + POST_NOTIFICATION);
         client.newCall(request).enqueue(callback);
     }
 }
