@@ -3,6 +3,9 @@ package it.systemslab.systemslabnotificationlistener;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
@@ -12,6 +15,8 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.gson.Gson;
 import com.google.zxing.integration.android.IntentIntegrator;
@@ -24,19 +29,19 @@ import org.androidannotations.annotations.ViewById;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
-import it.systemslab.cryptomodule.DHKEInstance;
-import it.systemslab.systemslabnotificationlistener.listener.NotificationListener;
-import it.systemslab.systemslabnotificationlistener.model.Message;
-import it.systemslab.systemslabnotificationlistener.model.MqttNotification;
-import it.systemslab.systemslabnotificationlistener.model.QRData;
-import it.systemslab.systemslabnotificationlistener.utils.CryptoUtils;
+import it.syscake.notificationlistenerlibrary.SharedPrefManager;
+import it.syscake.notificationlistenerlibrary.listener.NotificationListener;
+import it.syscake.notificationlistenerlibrary.model.QRData;
+import it.syscake.notificationlistenerlibrary.utils.CryptoUtils;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Confirm;
+import static it.syscake.notificationlistenerlibrary.http.NotificationRestClient.confirmNotification;
+
 
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements ServiceConnection, Callback {
@@ -45,12 +50,26 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private NotificationListener service;
 
     @ViewById
+    RecyclerView packages_rv;
+
+    @ViewById
     TextView alias;
 
     @AfterViews
     void av(){
         SharedPrefManager instance = SharedPrefManager.getInstance(this);
         alias.setText(String.format("Alias: %s", instance.getAlias()));
+        startService();
+
+        final PackageManager pm = getPackageManager();
+        PackagesAdapter adapter = new PackagesAdapter(this);
+        packages_rv.setLayoutManager(new LinearLayoutManager(this));
+        packages_rv.setAdapter(adapter);
+        adapter.setDataset(pm.getInstalledApplications(PackageManager.GET_META_DATA));
+    }
+
+    private boolean isSystemPackage(int flags) {
+        return ((flags & ApplicationInfo.FLAG_SYSTEM) != 0);
     }
 
     @Click(R.id.associazione)
@@ -61,7 +80,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     @Override
     protected void onResume() {
         super.onResume();
-        startService();
     }
 
     @Override
@@ -101,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     prefManager.setKey(CryptoUtils.encryptData(qrdata.getKey(), this));
                     alias.setText(String.format("Alias: %s", contentAlias));
 
-                    confirmNotification();
+                    confirmNotification(this, this);
                 }
             } else {
                 super.onActivityResult(requestCode, resultCode, data);
@@ -153,27 +171,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onServiceDisconnected(ComponentName componentName) {
         Log.d(TAG, "onServiceDisconnected: unbinded");
         service = null;
-    }
-
-    private void confirmNotification() {
-        SharedPrefManager instance = SharedPrefManager.getInstance(this);
-        if (instance.getAlias() != null) {
-            DHKEInstance dhkeInstance = DHKEInstance.getInstance();
-            NotificationRestClient client = new NotificationRestClient();
-            client.sendNotificationToWatch(
-                new Message(
-                    instance.getAlias(),
-                    new MqttNotification(
-                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"action"),
-                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this),"eu.beamdigital.beamwatch.confirm"),
-                        dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), this), "eu.beamdigital.beamwatch"),
-                        0,
-                        Confirm
-                    )
-                ),
-            this
-            );
-        }
     }
 
     @Override

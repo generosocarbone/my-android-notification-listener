@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener.listener;
+package it.syscake.notificationlistenerlibrary.listener;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -21,20 +21,17 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Objects;
 
+import it.syscake.notificationlistenerlibrary.SharedPrefManager;
+import it.syscake.notificationlistenerlibrary.http.NotificationRestClient;
+import it.syscake.notificationlistenerlibrary.model.Message;
+import it.syscake.notificationlistenerlibrary.model.MqttNotification;
+import it.syscake.notificationlistenerlibrary.utils.CryptoUtils;
 import it.systemslab.cryptomodule.DHKEInstance;
-import it.systemslab.systemslabnotificationlistener.NotificationRestClient;
-import it.systemslab.systemslabnotificationlistener.SharedPrefManager;
-import it.systemslab.systemslabnotificationlistener.model.Message;
-import it.systemslab.systemslabnotificationlistener.model.MqttNotification;
-import it.systemslab.systemslabnotificationlistener.utils.CryptoUtils;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
-
-import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Posted;
-import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Removed;
-import static it.systemslab.systemslabnotificationlistener.model.MqttNotification.Action.Update;
 
 public class NotificationListener extends NotificationListenerService implements Callback {
 
@@ -43,7 +40,7 @@ public class NotificationListener extends NotificationListenerService implements
     private final NotificationRestClient client = new NotificationRestClient();
     private boolean bound = false;
     private final HashSet<Integer> set = new HashSet<>();
-
+    private final SharedPrefManager sharedPrefManager = SharedPrefManager.getInstance(this);
 
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -53,8 +50,7 @@ public class NotificationListener extends NotificationListenerService implements
 
     @Override
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-        Log.d(TAG, "onResponse: on response");
-        Log.d(TAG, "onResponse: body: " + response.body().string());
+        Log.d(TAG, "onResponse: body: " + Objects.requireNonNull(response.body()).string());
 
     }
 
@@ -118,6 +114,7 @@ public class NotificationListener extends NotificationListenerService implements
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         super.onNotificationPosted(sbn);
+
         Notification notification = sbn.getNotification();
         Log.d(TAG, "onNotificationPosted: id: " + sbn.getId());
         if (notification != null) {
@@ -130,20 +127,20 @@ public class NotificationListener extends NotificationListenerService implements
                 MqttNotification.Action action;
 
                 if (set.add(sbn.getId())) {
-                    action = Posted;
+                    action = MqttNotification.Action.Posted;
                 } else {
-                    action = Update;
+                    action = MqttNotification.Action.Update;
                 }
 
                 Log.d(TAG, "onNotificationPosted: active: " + set.size());
                 String packageName = sbn.getPackageName();
-                if (packageName.equals("com.android.systemui")) {
+                if (!sharedPrefManager.getPackageEnabled(packageName)) {
                     Log.d(TAG, "onNotificationPosted: avoiding " + packageName);
                 } else {
 
                     ///
-                    /// for (String k : extras.keySet())
-                    ///    Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
+                    for (String k : extras.keySet())
+                       Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
 
                     packageName = encrypt(sbn.getPackageName());
                     String title = encrypt(getStringFromExtras(extras, "android.title"));
@@ -152,16 +149,9 @@ public class NotificationListener extends NotificationListenerService implements
                     SharedPrefManager instance = SharedPrefManager.getInstance(this);
                     Message m = new Message(
                         instance.getAlias(),
-                        new MqttNotification(
-                            title,
-                            text,
-                            packageName,
-                            sbn.getId(),
-                            action
-                        )
+                        new MqttNotification(title, text, packageName, sbn.getId(), action)
                     );
 
-                    Log.d(TAG, "onNotificationPosted: " + m.toString());
                     client.sendNotificationToWatch(m, this);
                 }
             } else {
@@ -194,13 +184,13 @@ public class NotificationListener extends NotificationListenerService implements
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         super.onNotificationRemoved(sbn);
-        Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId());
+
         set.remove(sbn.getId());
-        Log.d(TAG, "onNotificationRemoved: active: " + set.size());
+        Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId() + "; active: " + set.size());
         client.sendNotificationToWatch(
                 new Message(
                         SharedPrefManager.getInstance(this).getAlias(),
-                        new MqttNotification(sbn.getId(), Removed)
+                        new MqttNotification(sbn.getId(), MqttNotification.Action.Removed)
                 ),
                 this
         );
@@ -212,7 +202,6 @@ public class NotificationListener extends NotificationListenerService implements
         Log.d(TAG, "destroyed");
     }
 
-    /// public method
     public void publicMethod(){
         Log.d(TAG, "publicMethod: this is a public method");
     }

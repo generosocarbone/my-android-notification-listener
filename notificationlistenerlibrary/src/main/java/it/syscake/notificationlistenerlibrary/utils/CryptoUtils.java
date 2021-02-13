@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener.utils;
+package it.syscake.notificationlistenerlibrary.utils;
 
 import android.content.Context;
 
@@ -8,9 +8,15 @@ import com.yakivmospan.scytale.Store;
 
 import javax.crypto.SecretKey;
 
+import it.systemslab.cryptomodule.DHKEInstance;
+
 public class CryptoUtils {
     
     private static final String ALIAS = "KEY_ALIAS";
+
+    public static DHKEInstance getInstance() {
+        return DHKEInstance.getInstance();
+    }
 
     public static String encryptData(String data, Context context) {
         Store store = new Store(context);

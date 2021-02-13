@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener.model;
+package it.syscake.notificationlistenerlibrary.model;
 
 import com.google.gson.Gson;
 

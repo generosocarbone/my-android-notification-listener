@@ -1,4 +1,4 @@
-package it.systemslab.systemslabnotificationlistener.listener;
+package it.syscake.notificationlistenerlibrary.listener;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

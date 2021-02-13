@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_name">Notification Listener</string>
+    <string name="preference_file_key">it.systemslab.systemslabnotificationlistener.SP</string>
+    <string name="associazione">Associazione watch</string>
+    <string name="title_activity_scan_qr_code">ScanQrCodeActivity</string>
+    <string name="hello_world">Hello Square World!</string>
+    <string name="cancelled">Scansione annullata</string>
+    <string name="conf_error">Dati errati. Contattare l\'amministratore</string>
+</resources>

@@ -1,12 +1,12 @@
-package it.systemslab.systemslabnotificationlistener;
+package it.syscake.notificationlistenerlibrary;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import static it.systemslab.systemslabnotificationlistener.Const.ALIAS;
-import static it.systemslab.systemslabnotificationlistener.Const.KEY;
-
 public class SharedPrefManager {
+
+    private static final String ALIAS = "it.systemslab.systemslabnotificationlistener.alias";
+    private static final String KEY = "it.systemslab.systemslabnotificationlistener.key";
 
     private static SharedPreferences sp;
     private final static String VALUE_NOT_FOUND = "VALUE_NOT_FOUND";
@@ -45,6 +45,24 @@ public class SharedPrefManager {
         return sp.getString(key, null);
     }
 
+    private void writeBoolean(String key, boolean value) {
+        init();
+        editor.putBoolean(key, value);
+        editor.commit();
+    }
+
+    private boolean readBoolean(String key) {
+        if (key == null) return false;
+        if (sp == null) openHandler();
+
+        try {
+            return sp.getBoolean(key, false);
+        } catch (Exception e) {
+            writeBoolean(key, false);
+            return false;
+        }
+    }
+
     public String getAlias() {
         return readString(ALIAS);
     }
@@ -59,5 +77,17 @@ public class SharedPrefManager {
 
     public void setKey(String key) {
         writeString(KEY, key);
+    }
+
+    public void enablePackage(String packageName) {
+        writeBoolean(packageName, true);
+    }
+
+    public void disablePackage(String packageName) {
+        writeBoolean(packageName, false);
+    }
+
+    public boolean getPackageEnabled(String packageName) {
+        return readBoolean(packageName);
     }
 }
