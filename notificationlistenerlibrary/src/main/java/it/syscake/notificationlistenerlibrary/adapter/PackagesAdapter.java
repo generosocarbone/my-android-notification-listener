@@ -2,6 +2,7 @@ package it.syscake.notificationlistenerlibrary.adapter;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import it.syscake.notificationlistenerlibrary.R;
@@ -35,7 +37,14 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
         for (ApplicationInfo ai : newPackages) {
             if (!isSystemPackage(ai.flags))
                 packages.add(ai);
+        }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            packages.sort((o, oo) -> {
+                String s = o.loadLabel(context.getPackageManager()).toString();
+                String ss = oo.loadLabel(context.getPackageManager()).toString();
+                return s.compareToIgnoreCase(ss);
+            });
         }
 
         notifyDataSetChanged();

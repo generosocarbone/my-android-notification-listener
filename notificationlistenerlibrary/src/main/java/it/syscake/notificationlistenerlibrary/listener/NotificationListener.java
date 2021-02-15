@@ -6,6 +6,8 @@ import android.app.NotificationChannelGroup;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,6 +34,8 @@ import it.systemslab.cryptomodule.DHKEInstance;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+
+import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.Removed;
 
 public class NotificationListener extends NotificationListenerService implements Callback {
 
@@ -137,12 +141,19 @@ public class NotificationListener extends NotificationListenerService implements
                 if (!sharedPrefManager.getPackageEnabled(packageName)) {
                     Log.d(TAG, "onNotificationPosted: avoiding " + packageName);
                 } else {
+                    try {
+                        ApplicationInfo applicationInfo = getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA);
+                        packageName = applicationInfo.loadLabel(getPackageManager()).toString();
+                    } catch (PackageManager.NameNotFoundException e) {
+                        Log.d(TAG, "onNotificationPosted: e: " + e.toString());
+                        e.printStackTrace();
+                    }
+                    packageName = encrypt(packageName);
 
                     ///
                     for (String k : extras.keySet())
                        Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
 
-                    packageName = encrypt(sbn.getPackageName());
                     String title = encrypt(getStringFromExtras(extras, "android.title"));
                     String text = encrypt(getStringFromExtras(extras, "android.text"));
 
@@ -188,11 +199,11 @@ public class NotificationListener extends NotificationListenerService implements
         set.remove(sbn.getId());
         Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId() + "; active: " + set.size());
         client.sendNotificationToWatch(
-                new Message(
-                        SharedPrefManager.getInstance(this).getAlias(),
-                        new MqttNotification(sbn.getId(), MqttNotification.Action.Removed)
-                ),
-                this
+            new Message(
+                SharedPrefManager.getInstance(this).getAlias(),
+                new MqttNotification(sbn.getId(), Removed)
+            ),
+            this
         );
     }
 
