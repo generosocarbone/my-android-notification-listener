@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Lifesensor Workers</string>
+    <string name="no_device">Nessun dispositivo associato.\nClicca qui per effettuare l\'associazione.</string>
+</resources>

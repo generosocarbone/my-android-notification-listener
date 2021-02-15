@@ -45,23 +45,28 @@ public class NotificationRestClient {
         client.newCall(request).enqueue(callback);
     }
 
+    private static String encrypt(Context context, SharedPrefManager instance, String message) {
+        DHKEInstance dhkeInstance = CryptoUtils.getInstance();
+        return dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), context),message);
+    }
+
     public static void confirmNotification(Context context, Callback callback) {
         SharedPrefManager instance = SharedPrefManager.getInstance(context);
         if (instance.getAlias() != null) {
-            DHKEInstance dhkeInstance = CryptoUtils.getInstance();
+
             NotificationRestClient client = new NotificationRestClient();
             client.sendNotificationToWatch(
-                    new Message(
-                            instance.getAlias(),
-                            new MqttNotification(
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), context),"action"),
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), context),"eu.beamdigital.beamwatch.confirm"),
-                                    dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), context), "eu.beamdigital.beamwatch"),
-                                    0,
-                                    Confirm
-                            )
-                    ),
-                    callback
+                new Message(
+                    instance.getAlias(),
+                    new MqttNotification(
+                        encrypt(context, instance, "action"),
+                        encrypt(context, instance, "eu.beamdigital.beamwatch.confirm"),
+                        encrypt(context, instance, "eu.beamdigital.beamwatch"),
+                        0,
+                        Confirm
+                    )
+                ),
+                callback
             );
         }
     }

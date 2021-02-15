@@ -1,12 +1,10 @@
-package it.systemslab.systemslabnotificationlistener;
+package it.syscake.notificationlistenerlibrary.adapter;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.syscake.notificationlistenerlibrary.R;
 import it.syscake.notificationlistenerlibrary.SharedPrefManager;
 
 public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.PackagesViewHolder> {
@@ -74,7 +73,7 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
         return packages.size();
     }
 
-    public class PackagesViewHolder extends RecyclerView.ViewHolder {
+    public static class PackagesViewHolder extends RecyclerView.ViewHolder {
         ImageView app_icon;
         TextView app_name;
         SwitchCompat enable_notifications;

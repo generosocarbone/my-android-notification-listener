@@ -1,14 +1,16 @@
-package it.systemslab.systemslabnotificationlistener;
+package eu.beamdigital.lifesensorworkers;
 
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,10 +23,6 @@ import com.google.gson.Gson;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import org.androidannotations.annotations.AfterViews;
-import org.androidannotations.annotations.Click;
-import org.androidannotations.annotations.EActivity;
-import org.androidannotations.annotations.ViewById;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -41,44 +39,48 @@ import okhttp3.Response;
 
 import static it.syscake.notificationlistenerlibrary.http.NotificationRestClient.confirmNotification;
 
-
-@EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements ServiceConnection, Callback {
 
+    private TextView no_device;
+    private ImageView scanner;
+    private RecyclerView packages_rv;
     private final static String TAG = MainActivity.class.getSimpleName();
     private NotificationListener service;
+    private PackagesAdapter adapter;
 
-    @ViewById
-    RecyclerView packages_rv;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        no_device = findViewById(R.id.no_device);
+        scanner = findViewById(R.id.scanner);
+        packages_rv = findViewById(R.id.packages_rv);
 
-    @ViewById
-    TextView alias;
-
-    @AfterViews
-    void av(){
-        SharedPrefManager instance = SharedPrefManager.getInstance(this);
-        alias.setText(String.format("Alias: %s", instance.getAlias()));
-        startService();
-
-        final PackageManager pm = getPackageManager();
-        PackagesAdapter adapter = new PackagesAdapter(this);
+        adapter = new PackagesAdapter(this);
         packages_rv.setLayoutManager(new LinearLayoutManager(this));
         packages_rv.setAdapter(adapter);
-        adapter.setDataset(pm.getInstalledApplications(PackageManager.GET_META_DATA));
+
+        setUi();
+
+        startService();
     }
 
-    private boolean isSystemPackage(int flags) {
-        return ((flags & ApplicationInfo.FLAG_SYSTEM) != 0);
-    }
-
-    @Click(R.id.associazione)
-    void associa(){
+    public void associa(View view){
         new IntentIntegrator(this).initiateScan();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private void setUi() {
+
+        SharedPrefManager instance = new SharedPrefManager(this);
+
+        no_device.setVisibility(instance.getAlias() == null ? View.VISIBLE : View.GONE);
+        scanner.setVisibility(instance.getAlias() == null ? View.VISIBLE : View.GONE);
+        packages_rv.setVisibility(instance.getAlias() == null ? View.GONE : View.VISIBLE);
+
+        if(instance.getAlias() != null) {
+            final PackageManager pm = getPackageManager();
+            adapter.setDataset(pm.getInstalledApplications(PackageManager.GET_META_DATA));
+        }
     }
 
     @Override
@@ -116,8 +118,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     SharedPrefManager prefManager = SharedPrefManager.getInstance(this);
                     prefManager.setAlias(contentAlias);
                     prefManager.setKey(CryptoUtils.encryptData(qrdata.getKey(), this));
-                    alias.setText(String.format("Alias: %s", contentAlias));
 
+                    setUi();
                     confirmNotification(this, this);
                 }
             } else {
