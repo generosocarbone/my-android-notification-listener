@@ -2,19 +2,19 @@ package it.syscake.notificationlistenerlibrary.adapter;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import it.syscake.notificationlistenerlibrary.R;
@@ -22,11 +22,16 @@ import it.syscake.notificationlistenerlibrary.SharedPrefManager;
 
 public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.PackagesViewHolder> {
 
+    private static final String TAG = PackagesAdapter.class.getSimpleName();
     public final ArrayList<ApplicationInfo> packages = new ArrayList<>(0);
     private final Context context;
+    private final PackageManager pm;
+    private final SharedPrefManager instance;
 
-    public PackagesAdapter(Context context) {
+    public PackagesAdapter(Context context, PackageManager packageManager) {
         this.context = context;
+        this.pm = packageManager;
+        this.instance = SharedPrefManager.getInstance(context);
     }
 
     public void setDataset(List<ApplicationInfo> newPackages) {
@@ -41,8 +46,8 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             packages.sort((o, oo) -> {
-                String s = o.loadLabel(context.getPackageManager()).toString();
-                String ss = oo.loadLabel(context.getPackageManager()).toString();
+                String s = o.loadLabel(pm).toString();
+                String ss = oo.loadLabel(pm).toString();
                 return s.compareToIgnoreCase(ss);
             });
         }
@@ -64,12 +69,11 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
     @Override
     public void onBindViewHolder(@NonNull PackagesViewHolder holder, int position) {
         ApplicationInfo applicationInfo = packages.get(position);
-        holder.app_name.setText(applicationInfo.loadLabel(context.getPackageManager()));
-        holder.app_icon.setImageDrawable(applicationInfo.loadIcon(context.getPackageManager()));
-        SharedPrefManager instance = SharedPrefManager.getInstance(context);
+        holder.app_name.setText(applicationInfo.loadLabel(pm));
+        holder.app_icon.setImageDrawable(applicationInfo.loadIcon(pm));
         holder.enable_notifications.setChecked(instance.getPackageEnabled(applicationInfo.packageName));
-        holder.enable_notifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
+        holder.enable_notifications.setOnClickListener(v -> {
+            if (((CheckBox) v).isChecked()) {
                 instance.enablePackage(applicationInfo.packageName);
             } else {
                 instance.disablePackage(applicationInfo.packageName);
@@ -85,7 +89,7 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
     public static class PackagesViewHolder extends RecyclerView.ViewHolder {
         ImageView app_icon;
         TextView app_name;
-        SwitchCompat enable_notifications;
+        CheckBox enable_notifications;
 
         public PackagesViewHolder(@NonNull View itemView) {
             super(itemView);

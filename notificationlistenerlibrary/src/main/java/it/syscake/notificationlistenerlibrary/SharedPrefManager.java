@@ -2,14 +2,15 @@ package it.syscake.notificationlistenerlibrary;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 public class SharedPrefManager {
 
+    private static final String TAG = SharedPrefManager.class.getSimpleName();
     private static final String ALIAS = "it.systemslab.systemslabnotificationlistener.alias";
     private static final String KEY = "it.systemslab.systemslabnotificationlistener.key";
 
     private static SharedPreferences sp;
-    private final static String VALUE_NOT_FOUND = "VALUE_NOT_FOUND";
     private static SharedPreferences.Editor editor;
     private final Context context;
 
@@ -58,6 +59,7 @@ public class SharedPrefManager {
         try {
             return sp.getBoolean(key, false);
         } catch (Exception e) {
+            Log.d(TAG, "readBoolean: e: " + e.toString());
             writeBoolean(key, false);
             return false;
         }
@@ -80,14 +82,18 @@ public class SharedPrefManager {
     }
 
     public void enablePackage(String packageName) {
+        Log.d(TAG, "enablePackage: " + packageName);
         writeBoolean(packageName, true);
     }
 
     public void disablePackage(String packageName) {
+        Log.d(TAG, "disablePackage: " + packageName);
         writeBoolean(packageName, false);
     }
 
     public boolean getPackageEnabled(String packageName) {
-        return readBoolean(packageName);
+        boolean b = readBoolean(packageName);
+        Log.d(TAG, String.format("getPackageEnabled: %s %s", packageName, b));
+        return b;
     }
 }

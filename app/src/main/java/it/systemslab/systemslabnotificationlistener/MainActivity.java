@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         startService();
 
         final PackageManager pm = getPackageManager();
-        PackagesAdapter adapter = new PackagesAdapter(this);
+        PackagesAdapter adapter = new PackagesAdapter(this, getPackageManager());
         packages_rv.setLayoutManager(new LinearLayoutManager(this));
         packages_rv.setAdapter(adapter);
         adapter.setDataset(pm.getInstalledApplications(PackageManager.GET_META_DATA));

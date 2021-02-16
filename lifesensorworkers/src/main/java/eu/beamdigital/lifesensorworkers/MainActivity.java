@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private TextView no_device;
     private ImageView scanner;
+    private ImageView header_scanner;
     private RecyclerView packages_rv;
     private final static String TAG = MainActivity.class.getSimpleName();
     private NotificationListener service;
@@ -55,13 +56,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         no_device = findViewById(R.id.no_device);
         scanner = findViewById(R.id.scanner);
         packages_rv = findViewById(R.id.packages_rv);
+        header_scanner = findViewById(R.id.header_scanner);
 
-        adapter = new PackagesAdapter(this);
+        adapter = new PackagesAdapter(this, getPackageManager());
         packages_rv.setLayoutManager(new LinearLayoutManager(this));
         packages_rv.setAdapter(adapter);
 
         setUi();
-
         startService();
     }
 
@@ -75,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         no_device.setVisibility(instance.getAlias() == null ? View.VISIBLE : View.GONE);
         scanner.setVisibility(instance.getAlias() == null ? View.VISIBLE : View.GONE);
+        header_scanner.setVisibility(instance.getAlias() == null ? View.INVISIBLE : View.VISIBLE);
         packages_rv.setVisibility(instance.getAlias() == null ? View.GONE : View.VISIBLE);
 
         if(instance.getAlias() != null) {
