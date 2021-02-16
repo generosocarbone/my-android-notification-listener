@@ -15,6 +15,9 @@ public class SplashScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
         new Handler(Looper.myLooper())
-                .postDelayed(() -> startActivity(new Intent(this, MainActivity.class)), 500);
+                .postDelayed(() -> {
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                }, 500);
     }
 }
