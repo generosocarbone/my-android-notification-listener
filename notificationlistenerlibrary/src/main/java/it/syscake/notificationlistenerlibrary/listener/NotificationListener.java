@@ -14,8 +14,12 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.provider.Telephony;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.telecom.TelecomManager;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.text.SpannableString;
 import android.util.Log;
 
@@ -37,7 +41,7 @@ import okhttp3.Response;
 
 import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.Removed;
 
-public class NotificationListener extends NotificationListenerService implements Callback {
+public class NotificationListener extends NotificationListenerService implements Callback, PhoneCallListener.PhoneCallInterface {
 
     private final static String TAG = NotificationListener.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
@@ -45,6 +49,8 @@ public class NotificationListener extends NotificationListenerService implements
     private boolean bound = false;
     private final HashSet<Integer> set = new HashSet<>();
     private final SharedPrefManager sharedPrefManager = SharedPrefManager.getInstance(this);
+    private TelephonyManager manager;
+    private final PhoneCallListener phoneCallListener = new PhoneCallListener();
 
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -56,6 +62,24 @@ public class NotificationListener extends NotificationListenerService implements
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
         Log.d(TAG, "onResponse: body: " + Objects.requireNonNull(response.body()).string());
 
+    }
+
+    @Override
+    public void outgoingCallStarted() {
+        Log.d(TAG, "outgoingCallStarted");
+        client.sendOutgoingCallNotification(this, this);
+    }
+
+    @Override
+    public void disconnected() {
+        Log.d(TAG, "disconnected");
+        client.sendDisconnectedCallNotification(this, this);
+    }
+
+    @Override
+    public void ingoingCallStarted() {
+        Log.d(TAG, "ingoingCallStarted");
+        client.sendIngoingCallNotification(this, this);
     }
 
     public class LocalBinder extends Binder {
@@ -81,7 +105,14 @@ public class NotificationListener extends NotificationListenerService implements
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "service created");
+        manager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+        if (manager != null) {
+            phoneCallListener.setListener(this);
+            manager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);
+        }
     }
+
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -211,6 +242,9 @@ public class NotificationListener extends NotificationListenerService implements
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "destroyed");
+        if (manager != null) {
+            manager.listen(phoneCallListener, PhoneStateListener.LISTEN_NONE);
+        }
     }
 
     public void publicMethod(){

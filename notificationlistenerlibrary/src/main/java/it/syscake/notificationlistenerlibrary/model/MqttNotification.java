@@ -13,6 +13,9 @@ public class MqttNotification {
         Posted,
         Update,
         Removed,
+        CallStarted,
+        CallRinging,
+        CallEnded,
     }
 
     private String title;

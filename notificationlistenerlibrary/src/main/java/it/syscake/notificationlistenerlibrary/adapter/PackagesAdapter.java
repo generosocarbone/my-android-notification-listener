@@ -40,7 +40,7 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.Packag
 
         packages.clear();
         for (ApplicationInfo ai : newPackages) {
-            if (!isSystemPackage(ai.flags))
+            if (pm.getLaunchIntentForPackage(ai.packageName) != null)
                 packages.add(ai);
         }
 

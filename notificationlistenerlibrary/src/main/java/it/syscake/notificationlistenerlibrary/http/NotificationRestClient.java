@@ -1,6 +1,7 @@
 package it.syscake.notificationlistenerlibrary.http;
 
 import android.content.Context;
+import android.telephony.TelephonyManager;
 
 import java.util.concurrent.TimeUnit;
 
@@ -16,6 +17,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
+import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.CallEnded;
+import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.CallRinging;
+import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.CallStarted;
 import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.Confirm;
 
 public class NotificationRestClient {
@@ -50,7 +54,7 @@ public class NotificationRestClient {
         return dhkeInstance.encryptMessage(CryptoUtils.decryptData(instance.getKey(), context),message);
     }
 
-    public static void confirmNotification(Context context, Callback callback) {
+    synchronized public static void confirmNotification(Context context, Callback callback) {
         SharedPrefManager instance = SharedPrefManager.getInstance(context);
         if (instance.getAlias() != null) {
 
@@ -67,6 +71,30 @@ public class NotificationRestClient {
                     )
                 ),
                 callback
+            );
+        }
+    }
+
+    public void sendOutgoingCallNotification(Context context, Callback callback) {
+        sendCallNotification(context, callback, CallStarted, TelephonyManager.CALL_STATE_OFFHOOK);
+    }
+
+    public void sendDisconnectedCallNotification(Context context, Callback callback) {
+        sendCallNotification(context, callback, CallEnded, TelephonyManager.CALL_STATE_IDLE);
+    }
+
+    public void sendIngoingCallNotification(Context context, Callback callback) {
+        sendCallNotification(context, callback, CallRinging, TelephonyManager.CALL_STATE_RINGING);
+    }
+
+    public void sendCallNotification(Context context, Callback callback, MqttNotification.Action action, int state) {
+        SharedPrefManager instance = SharedPrefManager.getInstance(context);
+        if (instance.getAlias() != null) {
+
+            NotificationRestClient client = new NotificationRestClient();
+            client.sendNotificationToWatch(
+                    new Message(instance.getAlias(), new MqttNotification(state, action )),
+                    callback
             );
         }
     }
