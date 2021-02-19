@@ -67,19 +67,49 @@ public class NotificationListener extends NotificationListenerService implements
     @Override
     public void outgoingCallStarted() {
         Log.d(TAG, "outgoingCallStarted");
-        client.sendOutgoingCallNotification(this, this);
+        client.sendOutgoingCallNotification(this, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Log.d(TAG, "onFailure: outgoingCallStarted: " + e.toString());
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                Log.d(TAG, "onResponse: outgoingCallStarted: " + response.body().string());
+            }
+        });
     }
 
     @Override
     public void disconnected() {
         Log.d(TAG, "disconnected");
-        client.sendDisconnectedCallNotification(this, this);
+        client.sendDisconnectedCallNotification(this, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Log.d(TAG, "onFailure: sendDisconnectedCallNotification: " + e.toString());
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                Log.d(TAG, "onResponse: sendDisconnectedCallNotification: " + response.body().string());
+            }
+        });
     }
 
     @Override
     public void ingoingCallStarted() {
         Log.d(TAG, "ingoingCallStarted");
-        client.sendIngoingCallNotification(this, this);
+        client.sendIngoingCallNotification(this, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Log.d(TAG, "onFailure: ingoingCallStarted: " + e.toString());
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                Log.d(TAG, "onResponse: ingoingCallStarted: " + response.body().string());
+            }
+        });
     }
 
     public class LocalBinder extends Binder {
@@ -185,10 +215,19 @@ public class NotificationListener extends NotificationListenerService implements
                     for (String k : extras.keySet())
                        Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
 
-                    String title = encrypt(getStringFromExtras(extras, "android.title"));
-                    String text = encrypt(getStringFromExtras(extras, "android.text"));
 
-                    SharedPrefManager instance = SharedPrefManager.getInstance(this);
+                    String title = encrypt(getStringFromExtras(extras, "android.title"));
+                    if(title == null || "".equals(title)) {
+                        Log.d(TAG, "onNotificationPosted: no title");
+                        return;
+                    }
+
+                    String text = encrypt(getStringFromExtras(extras, "android.text"));
+                    if(text == null || "".equals(text)) {
+                        Log.d(TAG, "onNotificationPosted: no title");
+                        return;
+                    }
+                        SharedPrefManager instance = SharedPrefManager.getInstance(this);
                     Message m = new Message(
                         instance.getAlias(),
                         new MqttNotification(title, text, packageName, sbn.getId(), action)
