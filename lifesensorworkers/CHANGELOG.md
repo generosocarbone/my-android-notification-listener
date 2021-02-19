@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Fri Feb 19 2021
+- Callback specifica per le chiamate
+
 ## Wed Feb 17 2021
 - Listener chiamate
 - App Google nella lista delle selezionabili
