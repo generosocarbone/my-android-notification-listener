@@ -30,7 +30,7 @@ import java.util.Objects;
 
 import it.syscake.notificationlistenerlibrary.SharedPrefManager;
 import it.syscake.notificationlistenerlibrary.adapter.PackagesAdapter;
-import it.syscake.notificationlistenerlibrary.listener.NotificationListener;
+import it.syscake.notificationlistenerlibrary.listener.NotificationListener1;
 import it.syscake.notificationlistenerlibrary.model.QRData;
 import it.syscake.notificationlistenerlibrary.utils.CryptoUtils;
 import okhttp3.Call;
@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private ImageView header_scanner;
     private RecyclerView packages_rv;
     private final static String TAG = MainActivity.class.getSimpleName();
-    private NotificationListener service;
+    private NotificationListener1 service;
     private PackagesAdapter adapter;
 
     @Override
@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private void startService() {
         if(service == null) {
-            Intent serviceIntent = new Intent(this, NotificationListener.class);
+            Intent serviceIntent = new Intent(this, NotificationListener1.class);
 //            startService(serviceIntent);
             bindService(serviceIntent, this, BIND_AUTO_CREATE);
         }
@@ -147,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         Log.d(TAG, "onServiceConnected: binded");
-        this.service = ((NotificationListener.LocalBinder) iBinder).getService();
+        this.service = ((NotificationListener1.LocalBinder) iBinder).getService();
         if(service != null) {
             service.publicMethod();
             if(service.checkNotificationListenerPermission()) {

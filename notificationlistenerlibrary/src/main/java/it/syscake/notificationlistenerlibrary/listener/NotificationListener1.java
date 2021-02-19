@@ -14,10 +14,8 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.UserHandle;
 import android.provider.Settings;
-import android.provider.Telephony;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
-import android.telecom.TelecomManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.SpannableString;
@@ -41,9 +39,9 @@ import okhttp3.Response;
 
 import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.Removed;
 
-public class NotificationListener extends NotificationListenerService implements Callback, PhoneCallListener.PhoneCallInterface {
+public class NotificationListener1 extends NotificationListenerService implements Callback, PhoneCallListener.PhoneCallInterface {
 
-    private final static String TAG = NotificationListener.class.getSimpleName();
+    private final static String TAG = NotificationListener1.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
     private final NotificationRestClient client = new NotificationRestClient();
     private boolean bound = false;
@@ -113,8 +111,8 @@ public class NotificationListener extends NotificationListenerService implements
     }
 
     public class LocalBinder extends Binder {
-        public NotificationListener getService() {
-            return NotificationListener.this;
+        public NotificationListener1 getService() {
+            return NotificationListener1.this;
         }
     }
 
@@ -266,15 +264,18 @@ public class NotificationListener extends NotificationListenerService implements
     public void onNotificationRemoved(StatusBarNotification sbn) {
         super.onNotificationRemoved(sbn);
 
-        set.remove(sbn.getId());
-        Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId() + "; active: " + set.size());
-        client.sendNotificationToWatch(
-            new Message(
-                SharedPrefManager.getInstance(this).getAlias(),
-                new MqttNotification(sbn.getId(), Removed)
-            ),
-            this
-        );
+        if(set.remove(sbn.getId())) {
+            Log.d(TAG, "onNotificationRemoved: id: " + sbn.getId() + "; active: " + set.size());
+            client.sendNotificationToWatch(
+                    new Message(
+                            SharedPrefManager.getInstance(this).getAlias(),
+                            new MqttNotification(sbn.getId(), Removed)
+                    ),
+                    this
+            );
+        } else {
+            Log.d(TAG, "onNotificationRemoved: notifica non trovata");
+        }
     }
 
     @Override
@@ -292,7 +293,7 @@ public class NotificationListener extends NotificationListenerService implements
 
     public boolean checkNotificationListenerPermission() {
         Log.d(TAG, "checking notification permissions");
-        ComponentName cn = new ComponentName(this, NotificationListener.class);
+        ComponentName cn = new ComponentName(this, NotificationListener1.class);
         String flat = Settings.Secure.getString(this.getContentResolver(), "enabled_notification_listeners");
         return flat != null && flat.contains(cn.flattenToString());
     }
@@ -300,7 +301,7 @@ public class NotificationListener extends NotificationListenerService implements
     public void requestRebind() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Log.d(TAG, "requesting rebind");
-            requestRebind(new ComponentName(this, NotificationListener.class));
+            requestRebind(new ComponentName(this, NotificationListener1.class));
         }
     }
 
@@ -308,7 +309,7 @@ public class NotificationListener extends NotificationListenerService implements
         return bound;
     }
 
-    public NotificationListener() {
+    public NotificationListener1() {
         super();
     }
 
