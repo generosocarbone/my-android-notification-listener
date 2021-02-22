@@ -39,9 +39,9 @@ import okhttp3.Response;
 
 import static it.syscake.notificationlistenerlibrary.model.MqttNotification.Action.Removed;
 
-public class NotificationListener1 extends NotificationListenerService implements Callback, PhoneCallListener.PhoneCallInterface {
+public class NotificationListener2 extends NotificationListenerService implements Callback, PhoneCallListener.PhoneCallInterface {
 
-    private final static String TAG = NotificationListener1.class.getSimpleName();
+    private final static String TAG = NotificationListener2.class.getSimpleName();
     private final LocalBinder binder = new LocalBinder();
     private final NotificationRestClient client = new NotificationRestClient();
     private boolean bound = false;
@@ -111,8 +111,8 @@ public class NotificationListener1 extends NotificationListenerService implement
     }
 
     public class LocalBinder extends Binder {
-        public NotificationListener1 getService() {
-            return NotificationListener1.this;
+        public NotificationListener2 getService() {
+            return NotificationListener2.this;
         }
     }
 
@@ -214,23 +214,27 @@ public class NotificationListener1 extends NotificationListenerService implement
                        Log.d(TAG, "onNotificationPosted: " + k + ": " + extras.get(k));
 
 
-                    String title = encrypt(getStringFromExtras(extras, "android.title"));
-                    if(title == null || "".equals(title)) {
+                    String title = getStringFromExtras(extras, "android.title");
+                    if("".equals(title)) {
                         Log.d(TAG, "onNotificationPosted: no title");
                         return;
                     }
+                    title = encrypt(title);
 
-                    String text = encrypt(getStringFromExtras(extras, "android.text"));
-                    if(text == null || "".equals(text)) {
-                        Log.d(TAG, "onNotificationPosted: no title");
+                    String text = getStringFromExtras(extras, "android.text");
+                    if("".equals(text)) {
+                        Log.d(TAG, "onNotificationPosted: no text");
                         return;
                     }
-                        SharedPrefManager instance = SharedPrefManager.getInstance(this);
+                    text = encrypt(text);
+
+                    SharedPrefManager instance = SharedPrefManager.getInstance(this);
                     Message m = new Message(
                         instance.getAlias(),
                         new MqttNotification(title, text, packageName, sbn.getId(), action)
                     );
 
+                    Log.d(TAG, "onNotificationPosted: m: " + m.toString());
                     client.sendNotificationToWatch(m, this);
                 }
             } else {
@@ -293,7 +297,7 @@ public class NotificationListener1 extends NotificationListenerService implement
 
     public boolean checkNotificationListenerPermission() {
         Log.d(TAG, "checking notification permissions");
-        ComponentName cn = new ComponentName(this, NotificationListener1.class);
+        ComponentName cn = new ComponentName(this, NotificationListener2.class);
         String flat = Settings.Secure.getString(this.getContentResolver(), "enabled_notification_listeners");
         return flat != null && flat.contains(cn.flattenToString());
     }
@@ -301,7 +305,7 @@ public class NotificationListener1 extends NotificationListenerService implement
     public void requestRebind() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Log.d(TAG, "requesting rebind");
-            requestRebind(new ComponentName(this, NotificationListener1.class));
+            requestRebind(new ComponentName(this, NotificationListener2.class));
         }
     }
 
@@ -309,7 +313,7 @@ public class NotificationListener1 extends NotificationListenerService implement
         return bound;
     }
 
-    public NotificationListener1() {
+    public NotificationListener2() {
         super();
     }
 

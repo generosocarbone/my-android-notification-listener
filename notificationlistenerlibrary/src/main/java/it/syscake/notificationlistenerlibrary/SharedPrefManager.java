@@ -82,18 +82,14 @@ public class SharedPrefManager {
     }
 
     public void enablePackage(String packageName) {
-        Log.d(TAG, "enablePackage: " + packageName);
         writeBoolean(packageName, true);
     }
 
     public void disablePackage(String packageName) {
-        Log.d(TAG, "disablePackage: " + packageName);
         writeBoolean(packageName, false);
     }
 
     public boolean getPackageEnabled(String packageName) {
-        boolean b = readBoolean(packageName);
-        Log.d(TAG, String.format("getPackageEnabled: %s %s", packageName, b));
-        return b;
+        return readBoolean(packageName);
     }
 }
