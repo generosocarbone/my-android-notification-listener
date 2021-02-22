@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Mon Feb 22 2021
+- Filtro no titolo
+- Filtro no testo
+
 ## Fri Feb 19 2021
 - Callback specifica per le chiamate
 
